@@ -7,8 +7,7 @@ import {
   useCameraPermissions, 
   CameraCapturedPicture, 
   FlashMode,
-
-  FocusMode  // <-- Importar Enum FocusMode
+  FocusMode
 } from 'expo-camera';
 import { useNavigation } from '@react-navigation/native';
 import { useProducts } from '../context/ProductContext'; // Ajuste o caminho se necessário
@@ -22,16 +21,11 @@ export default function ImagePickerCameraScreen_AdvancedControls() {
   const [photo, setPhoto] = useState<CameraCapturedPicture | null>(null);
   const cameraRef = useRef<CameraView>(null);
 
-  // --- STATES PARA OS CONTROLES (Usando Enums) ---
-// --- STATES PARA OS CONTROLES (Usando Strings) ---
- const [zoom, setZoom] = useState(0);
-  
-  // O tipo é FlashMode, o valor inicial é a string 'off'
+  // --- STATES PARA OS CONTROLES (Usando Strings) ---
+  const [zoom, setZoom] = useState(0);
   const [flashMode, setFlashMode] = useState<FlashMode>('off');
-  
-  // O tipo é FocusMode, o valor inicial é a string 'on'
   const [autoFocus, setAutoFocus] = useState<FocusMode>('on');
-  // Pedir permissão ao carregar
+
   useEffect(() => {
     (async () => {
       const { status } = await requestPermission();
@@ -42,9 +36,6 @@ export default function ImagePickerCameraScreen_AdvancedControls() {
     })();
   }, [requestPermission, navigation]);
 
-  // --- FUNÇÕES DE CONTROLE (Usando Enums) ---
-  // --- FUNÇÕES DE CONTROLE (Usando Strings) ---
-// --- FUNÇÕES DE CONTROLE (Usando Strings) ---
   const toggleFlash = () => {
     if (flashMode === 'off') setFlashMode('on');
     else if (flashMode === 'on') setFlashMode('auto');
@@ -55,21 +46,49 @@ export default function ImagePickerCameraScreen_AdvancedControls() {
     setAutoFocus(current => (current === 'on' ? 'off' : 'on'));
   };
 
-  // O mapeamento de ícones (já estava correto)
   const flashIcon = flashMode === 'off' ? 'flash-off' : (flashMode === 'on' ? 'flash' : 'flash-outline');
   const focusIcon = autoFocus === 'on' ? 'aperture' : 'aperture-outline';
 
-
-  
-
-
-  // --- Funções Padrão ---
+  // --- FUNÇÃO takePicture ATUALIZADA ---
   async function takePicture() {
-    if (cameraRef.current) {
-      const pic = await cameraRef.current.takePictureAsync({ quality: 0.5 });
-      setPhoto(pic);
-    }
+    if (!cameraRef.current) return;
+
+    // 1. Crie o objeto de opções com base na sua interface
+    const options = {
+      // quality (0-1): Já estávamos usando 0.5. 
+      // 0.7 é um bom equilíbrio entre qualidade e tamanho.
+      quality: 0.7,
+      
+      // base64: 'false' é o padrão. 
+      // Mude para 'true' se você PRECISAR da string base64 (ocupa muita memória).
+      base64: false,
+      
+      // exif: 'true' para incluir metadados (localização, dados da câmera).
+      exif: true,
+      
+      // mirror: 'false' para NÃO espelhar a foto da câmera frontal.
+      // O padrão é 'true' (espelhado). 'false' é melhor para fotos "reais".
+      mirror: false,
+      
+      // shutterSound: (iOS apenas) 'false' para tirar a foto sem som.
+      // O padrão é 'true'.
+      shutterSound: true, 
+    };
+
+    // 2. Passe as opções para a função
+    const pic = await cameraRef.current.takePictureAsync(options);
+    
+    // 3. (Para Estudo) Veja o que você recebeu no console
+    console.log('--- FOTO CAPTURADA ---');
+    console.log('URI:', pic.uri);
+    console.log('Qualidade (0.7):', pic.width, 'x', pic.height);
+    console.log('EXIF (true):', pic.exif); // Vai imprimir os metadados
+    console.log('Base64 (false):', pic.base64 ? 'Sim' : 'Não'); // Vai imprimir 'Não'
+    console.log('---------------------');
+
+    setPhoto(pic);
   }
+
   function retry() { setPhoto(null); }
   function usePhoto() {
     if (photo) {
@@ -79,11 +98,12 @@ export default function ImagePickerCameraScreen_AdvancedControls() {
   }
 
   // --- RENDERIZAÇÃO ---
+  // (O restante do seu código de renderização (return) permanece exatamente o mesmo)
+  // ...
   if (!permission?.granted) {
     return <View style={styles.loadingContainer}><Text style={styles.loadingText}>Solicitando permissão...</Text></View>;
   }
 
-  // Tela de PREVIEW
   if (photo) {
     return (
       <ImageBackground source={{ uri: photo.uri }} style={styles.previewContainer}>
@@ -95,7 +115,6 @@ export default function ImagePickerCameraScreen_AdvancedControls() {
     );
   }
 
-  // Tela da CÂMERA
   return (
     <View style={styles.container}>
       <CameraView 
@@ -104,7 +123,7 @@ export default function ImagePickerCameraScreen_AdvancedControls() {
         style={StyleSheet.absoluteFill} 
         zoom={zoom}
         flash={flashMode}
-        autofocus={autoFocus} // <-- Prop correta (minúscula)
+        autofocus={autoFocus}
       />
 
       {/* Controles do TOPO */}
@@ -125,7 +144,6 @@ export default function ImagePickerCameraScreen_AdvancedControls() {
 
       {/* Controles de BAIXO */}
       <View style={styles.bottomControls}>
-        {/* Controle de ZOOM */}
         <View style={styles.zoomContainer}>
           <Text style={styles.zoomText}>ZOOM</Text>
           <Slider
@@ -139,7 +157,6 @@ export default function ImagePickerCameraScreen_AdvancedControls() {
           />
         </View>
         
-        {/* Shutter e Virar Câmera */}
         <View style={styles.shutterContainer}>
           <TouchableOpacity style={styles.iconButton} onPress={() => setFacing(c => (c === 'back' ? 'front' : 'back'))}>
             <Ionicons name="camera-reverse" size={35} color="white" />
@@ -155,74 +172,21 @@ export default function ImagePickerCameraScreen_AdvancedControls() {
 }
 
 // --- ESTILOS ---
+// (Seus estilos permanecem os mesmos)
 const styles = StyleSheet.create({
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'black' },
   loadingText: { color: 'white', fontSize: 18 },
   container: { flex: 1, backgroundColor: 'black' },
-
-  // --- Controles do TOPO ---
-  topControls: {
-    position: 'absolute',
-    top: 50,
-    left: 20,
-    right: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  rightControls: {
-    flexDirection: 'row',
-  },
-  iconButton: {
-    padding: 10,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    borderRadius: 50,
-    marginHorizontal: 5,
-  },
-
-  // --- Controles de BAIXO ---
-  bottomControls: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingTop: 10,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-  },
-
-  // Controles do ZOOM
-  zoomContainer: {
-    paddingHorizontal: 30,
-    paddingBottom: 10,
-  },
-  zoomText: {
-    color: 'white',
-    textAlign: 'center',
-    fontSize: 12,
-  },
-  slider: {
-    width: '100%',
-    height: 40,
-  },
-
-  // Controles do SHUTTER
-  shutterContainer: {
-    height: 120,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 30,
-  },
-  shutterButton: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: 'white',
-    borderWidth: 4,
-    borderColor: 'grey',
-  },
-  placeholder: { width: 55, height: 55 }, // Apenas para alinhamento
-
-  // --- PREVIEW --- 
+  topControls: { position: 'absolute', top: 50, left: 20, right: 20, flexDirection: 'row', justifyContent: 'space-between' },
+  rightControls: { flexDirection: 'row' },
+  iconButton: { padding: 10, backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 50, marginHorizontal: 5 },
+  bottomControls: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingTop: 10, backgroundColor: 'rgba(0,0,0,0.3)' },
+  zoomContainer: { paddingHorizontal: 30, paddingBottom: 10 },
+  zoomText: { color: 'white', textAlign: 'center', fontSize: 12 },
+  slider: { width: '100%', height: 40 },
+  shutterContainer: { height: 120, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 30 },
+  shutterButton: { width: 70, height: 70, borderRadius: 35, backgroundColor: 'white', borderWidth: 4, borderColor: 'grey' },
+  placeholder: { width: 55, height: 55 }, 
   previewContainer: { flex: 1, justifyContent: 'flex-end' },
   previewButtonContainer: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', height: 120, backgroundColor: 'rgba(0,0,0,0.5)' },
   previewButton: { alignItems: 'center' },
